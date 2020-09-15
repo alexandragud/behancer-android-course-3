@@ -5,29 +5,24 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.fragment.app.Fragment
 import com.example.aleks.behancer_kotlin.R
+import com.example.aleks.behancer_kotlin.common.PresenterFragment
 import com.example.aleks.behancer_kotlin.common.RefreshOwner
 import com.example.aleks.behancer_kotlin.common.Refreshable
 import com.example.aleks.behancer_kotlin.data.Storage
 import com.example.aleks.behancer_kotlin.data.model.user.User
-import com.example.aleks.behancer_kotlin.utils.ApiUtils
 import com.example.aleks.behancer_kotlin.utils.formatTime
-import com.example.aleks.behancer_kotlin.utils.networkExceptions
 import com.squareup.picasso.Picasso
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.Disposable
-import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.v_error.*
 import kotlinx.android.synthetic.main.v_profile.*
 
 
-class ProfileFragment : Fragment(), Refreshable {
+class ProfileFragment : PresenterFragment<ProfilePresenter>(), ProfileView, Refreshable {
 
     private var storage: Storage? = null
     private var refreshOwner: RefreshOwner? = null
-    private var disposable: Disposable? = null
     private var username: String? = null
+    private lateinit var presenter: ProfilePresenter
 
     companion object {
         const val profileKey = "PROFILE_KEY"
@@ -62,44 +57,18 @@ class ProfileFragment : Fragment(), Refreshable {
         username = arguments?.getString(profileKey)
         activity?.title = username
         view_profile.visibility = View.VISIBLE
+        presenter = ProfilePresenter(this, storage)
         onRefreshData()
     }
 
     override fun onDetach() {
         storage = null
         refreshOwner = null
-        if (disposable != null)
-            disposable?.dispose()
         super.onDetach()
     }
 
     override fun onRefreshData() {
-        getProfile()
-    }
-
-    private fun getProfile() {
-        disposable = ApiUtils.initApiService().getUserInfo(username)
-            .subscribeOn(Schedulers.io())
-            .doOnSuccess { storage?.insertUser(it) }
-            .onErrorReturn {
-                when (it::class) {
-                    in networkExceptions -> storage?.getUser(username)
-                    else -> null
-                }
-            }
-            .observeOn(AndroidSchedulers.mainThread())
-            .doOnSubscribe { refreshOwner?.setRefreshState(true) }
-            .doFinally { refreshOwner?.setRefreshState(false) }
-            .subscribe({
-                errorView.visibility = View.GONE
-                view_profile.visibility = View.VISIBLE
-                bind(it.user)
-            },
-                {
-                    errorView.visibility = View.VISIBLE
-                    view_profile.visibility = View.GONE
-                })
-
+        presenter.getProfile(username)
     }
 
     private fun bind(user: User) {
@@ -109,5 +78,26 @@ class ProfileFragment : Fragment(), Refreshable {
         tv_display_name_details.text = user.displayName
         tv_created_on_details.text = formatTime(user.createdOn)
         tv_location_details.text = user.location
+    }
+
+    override fun getPresenter(): ProfilePresenter? = presenter
+
+    override fun showUser(user: User) {
+        errorView.visibility = View.GONE
+        view_profile.visibility = View.VISIBLE
+        bind(user)
+    }
+
+    override fun showLoading() {
+        refreshOwner?.setRefreshState(true)
+    }
+
+    override fun hideLoading() {
+        refreshOwner?.setRefreshState(false)
+    }
+
+    override fun showError() {
+        errorView.visibility = View.VISIBLE
+        view_profile.visibility = View.GONE
     }
 }

@@ -6,29 +6,24 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.aleks.behancer_kotlin.BuildConfig
 import com.example.aleks.behancer_kotlin.R
+import com.example.aleks.behancer_kotlin.common.PresenterFragment
 import com.example.aleks.behancer_kotlin.common.RefreshOwner
 import com.example.aleks.behancer_kotlin.common.Refreshable
 import com.example.aleks.behancer_kotlin.data.Storage
+import com.example.aleks.behancer_kotlin.data.model.project.Project
 import com.example.aleks.behancer_kotlin.ui.profile.ProfileActivity
 import com.example.aleks.behancer_kotlin.ui.profile.ProfileFragment
-import com.example.aleks.behancer_kotlin.utils.ApiUtils
-import com.example.aleks.behancer_kotlin.utils.networkExceptions
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.Disposable
-import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.fr_projects.*
 import kotlinx.android.synthetic.main.v_error.*
 
-class ProjectsFragment : Fragment(), Refreshable, ProjectsAdapter.OnItemClickListener {
+class ProjectsFragment : PresenterFragment<ProjectsPresenter>(), ProjectsView, Refreshable, ProjectsAdapter.OnItemClickListener {
 
     private var storage: Storage? = null
     private lateinit var projectsAdapter: ProjectsAdapter
     private var refreshOwner: RefreshOwner? = null
-    private var disposable: Disposable? = null
+    private lateinit var presenter: ProjectsPresenter
 
     companion object {
         fun newInstance(): ProjectsFragment =
@@ -57,6 +52,7 @@ class ProjectsFragment : Fragment(), Refreshable, ProjectsAdapter.OnItemClickLis
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         activity?.title = getText(R.string.projects)
+        presenter = ProjectsPresenter(this, storage)
         projectsAdapter =
             ProjectsAdapter(this)
         recycler.layoutManager = LinearLayoutManager(activity)
@@ -67,47 +63,44 @@ class ProjectsFragment : Fragment(), Refreshable, ProjectsAdapter.OnItemClickLis
     override fun onDetach() {
         storage = null
         refreshOwner = null
-        if (disposable != null)
-            disposable?.dispose()
         super.onDetach()
     }
 
     override fun onRefreshData() {
-        getProjects()
+        presenter.getProjects()
     }
 
     override fun onItemClick(username: String) {
-          val intent = Intent(activity, ProfileActivity::class.java)
+        presenter.openProfileFragment(username)
+    }
+
+    override fun getPresenter(): ProjectsPresenter? = presenter
+
+    override fun showProjects(projects: List<Project>) {
+        errorView.visibility = View.GONE
+        recycler.visibility = View.VISIBLE
+        projectsAdapter.addData(projects, true)
+    }
+
+    override fun openProfileFragment(userName: String) {
+        val intent = Intent(activity, ProfileActivity::class.java)
         val args = Bundle()
-        args.putString(ProfileFragment.profileKey, username)
+        args.putString(ProfileFragment.profileKey, userName)
         intent.putExtra(ProfileActivity.usernameKey, args)
         startActivity(intent)
     }
 
-    private fun getProjects() {
-        disposable = ApiUtils.initApiService()
-            .getProjects(BuildConfig.API_QUERY)
-            .doOnSuccess { storage?.insertProjects(it) }
-            .onErrorReturn {
-                if (networkExceptions.contains(it::class))
-                    storage?.getProjects()
-                else
-                    null
-            }
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .doOnSubscribe { refreshOwner?.setRefreshState(true) }
-            .doFinally { refreshOwner?.setRefreshState(false) }
-            .subscribe(
-                {
-                    errorView.visibility = View.GONE
-                    recycler.visibility = View.VISIBLE
-                    projectsAdapter.addData(it.projects, true)
-                },
-                {
-                    errorView.visibility = View.VISIBLE
-                    recycler.visibility = View.GONE
-                }
-            )
+    override fun showLoading() {
+        refreshOwner?.setRefreshState(true)
     }
+
+    override fun hideLoading() {
+        refreshOwner?.setRefreshState(false)
+    }
+
+    override fun showError() {
+        errorView.visibility = View.VISIBLE
+        recycler.visibility = View.GONE
+    }
+
 }
