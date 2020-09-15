@@ -1,13 +1,13 @@
 package com.example.aleks.behancer_kotlin.common
 
-import androidx.fragment.app.Fragment
+import moxy.MvpAppCompatFragment
 
-abstract class PresenterFragment<out T : BasePresenter> : Fragment() {
+abstract class PresenterFragment : MvpAppCompatFragment() {
 
-    abstract fun getPresenter(): T?
+    abstract fun getPresenter(): BasePresenter<*>?
 
     override fun onDetach() {
-        if (getPresenter() != null) getPresenter()?.disposeAll()
+        if ( getPresenter() != null) getPresenter()?.disposeAll()
         super.onDetach()
     }
 

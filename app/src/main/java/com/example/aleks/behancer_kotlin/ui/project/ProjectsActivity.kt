@@ -5,7 +5,6 @@ import com.example.aleks.behancer_kotlin.common.SingleFragmentActivity
 
 class ProjectsActivity : SingleFragmentActivity() {
 
-
     override fun getFragment(): Fragment = ProjectsFragment.newInstance()
 
 }

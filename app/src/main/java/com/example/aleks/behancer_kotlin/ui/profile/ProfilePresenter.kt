@@ -7,7 +7,7 @@ import com.example.aleks.behancer_kotlin.utils.networkExceptions
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 
-class ProfilePresenter(private val view: ProfileView, private val storage: Storage?) : BasePresenter() {
+class ProfilePresenter(private val storage: Storage?) : BasePresenter<ProfileView>() {
 
     fun getProfile(username: String?) {
         mCompositeDisposable.add(ApiUtils.initApiService().getUserInfo(username)
@@ -20,12 +20,13 @@ class ProfilePresenter(private val view: ProfileView, private val storage: Stora
                 }
             }
             .observeOn(AndroidSchedulers.mainThread())
-            .doOnSubscribe { view.showLoading() }
-            .doFinally { view.hideLoading() }
-            .subscribe({ view.showUser(it.user) },
-                { view.showError() })
+            .doOnSubscribe { viewState.showLoading() }
+            .doFinally { viewState.hideLoading() }
+            .subscribe({ viewState.showUser(it.user) },
+                { viewState.showError() })
 
         )
-
     }
+
+    fun openUserProjects(name:String?) = viewState.openProjects(name)
 }

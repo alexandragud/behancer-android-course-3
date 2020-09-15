@@ -19,14 +19,17 @@ class ProjectsHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     private val publishedOn = itemView.findViewById<TextView>(R.id.tv_published)
 
     fun bind(item:Project, onItemClickListener: ProjectsAdapter.OnItemClickListener?){
-        Picasso.get().load(item.cover?.photoUrl).fit().into(image)
+        if (item.cover!=null) Picasso.get().load(item.cover?.photoUrl).fit().into(image)
         name.text = item.name
-        username.text = item.owners[FIRST_OWNER_INDEX].username
         publishedOn.text = formatTime(item.publishedOn!!)
-
-        itemView.setOnClickListener {onItemClickListener?.onItemClick(
-            item.owners[FIRST_OWNER_INDEX].username
-        )}
+        if (item.owners.isNotEmpty()) {
+            username.text = item.owners[FIRST_OWNER_INDEX].username
+            itemView.setOnClickListener {
+                onItemClickListener?.onItemClick(
+                    item.owners[FIRST_OWNER_INDEX].username
+                )
+            }
+        }
     }
 
 }

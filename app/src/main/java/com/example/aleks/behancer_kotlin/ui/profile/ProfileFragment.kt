@@ -11,18 +11,21 @@ import com.example.aleks.behancer_kotlin.common.RefreshOwner
 import com.example.aleks.behancer_kotlin.common.Refreshable
 import com.example.aleks.behancer_kotlin.data.Storage
 import com.example.aleks.behancer_kotlin.data.model.user.User
+import com.example.aleks.behancer_kotlin.ui.project.user.UserProjectsFragment
 import com.example.aleks.behancer_kotlin.utils.formatTime
 import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.v_error.*
 import kotlinx.android.synthetic.main.v_profile.*
+import moxy.ktx.moxyPresenter
 
 
-class ProfileFragment : PresenterFragment<ProfilePresenter>(), ProfileView, Refreshable {
+class ProfileFragment : PresenterFragment(), ProfileView, Refreshable {
 
     private var storage: Storage? = null
     private var refreshOwner: RefreshOwner? = null
     private var username: String? = null
-    private lateinit var presenter: ProfilePresenter
+
+    private val profilePresenter by moxyPresenter { ProfilePresenter(storage) }
 
     companion object {
         const val profileKey = "PROFILE_KEY"
@@ -57,7 +60,7 @@ class ProfileFragment : PresenterFragment<ProfilePresenter>(), ProfileView, Refr
         username = arguments?.getString(profileKey)
         activity?.title = username
         view_profile.visibility = View.VISIBLE
-        presenter = ProfilePresenter(this, storage)
+        show_projects_btn.setOnClickListener { profilePresenter.openUserProjects(username) }
         onRefreshData()
     }
 
@@ -68,7 +71,7 @@ class ProfileFragment : PresenterFragment<ProfilePresenter>(), ProfileView, Refr
     }
 
     override fun onRefreshData() {
-        presenter.getProfile(username)
+        profilePresenter.getProfile(username)
     }
 
     private fun bind(user: User) {
@@ -80,12 +83,21 @@ class ProfileFragment : PresenterFragment<ProfilePresenter>(), ProfileView, Refr
         tv_location_details.text = user.location
     }
 
-    override fun getPresenter(): ProfilePresenter? = presenter
+    override fun getPresenter(): ProfilePresenter? = profilePresenter
 
     override fun showUser(user: User) {
         errorView.visibility = View.GONE
         view_profile.visibility = View.VISIBLE
         bind(user)
+    }
+
+    override fun openProjects(username: String?) {
+        val bundle = Bundle()
+        bundle.putString(UserProjectsFragment.USER_KEY, username)
+        fragmentManager?.beginTransaction()!!
+            .replace(R.id.fragmentContainer, UserProjectsFragment.newInstance(bundle))
+            .addToBackStack(ProfileFragment::class.java.simpleName)
+            .commit()
     }
 
     override fun showLoading() {

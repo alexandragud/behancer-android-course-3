@@ -13,9 +13,7 @@ class Storage(val behanceDao: BehanceDao) {
         val projects = response.projects
         behanceDao.insertProjects(projects)
         val assembled = assemble(projects)
-        behanceDao.clearCoverTable()
         behanceDao.insertCovers(assembled.first)
-        behanceDao.clearOwnerTable()
         behanceDao.insertOwners(assembled.second)
     }
 
@@ -24,13 +22,14 @@ class Storage(val behanceDao: BehanceDao) {
         val owners = ArrayList<Owner>()
         for (i in projects.indices) {
             val cover = projects[i].cover
-            cover?.id = i
             cover?.projectId = projects[i].id
+            if (behanceDao.getCoverFromProject(projects[i].id) == null)
+                covers.add(cover)
             covers += cover
             val owner = projects[i].owners[0]
-            owner.id = i
             owner.projectId = projects[i].id
-            owners += owner
+            if (!behanceDao.getOwnersFromProject(projects[i].id).contains(owner))
+                owners += owner
         }
         return Pair(covers, owners)
     }
@@ -59,6 +58,20 @@ class Storage(val behanceDao: BehanceDao) {
         val user = behanceDao.getUserByName(username)
         user.image = behanceDao.getImageFromUser(user.id)
         return UserResponse(user)
+    }
+
+    fun getUserProjects(username: String): ProjectResponse? {
+        val projects = behanceDao.getUserProjects(username)
+        if (projects != null && !projects.isEmpty()) {
+            for(p in projects){
+                p.apply {
+                    cover = behanceDao.getCoverFromProject(id)!!
+                    owners = behanceDao.getOwnersFromProject(id)
+                }
+            }
+            return ProjectResponse(projects)
+        }
+        else return null
     }
 
     interface StorageOwner {

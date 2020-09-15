@@ -6,7 +6,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.aleks.behancer_kotlin.R
 import com.example.aleks.behancer_kotlin.data.model.project.Project
 
-class ProjectsAdapter(private val onItemClickListener: OnItemClickListener): RecyclerView.Adapter<ProjectsHolder>() {
+class ProjectsAdapter(private val onItemClickListener: OnItemClickListener?): RecyclerView.Adapter<ProjectsHolder>() {
 
     private val projects = ArrayList<Project>()
 

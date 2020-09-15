@@ -8,7 +8,7 @@ import com.example.aleks.behancer_kotlin.utils.networkExceptions
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 
-class ProjectsPresenter(private val view: ProjectsView, private val storage: Storage?) : BasePresenter() {
+class ProjectsPresenter(private val storage: Storage?) : BasePresenter<ProjectsView>() {
 
     fun getProjects() {
         mCompositeDisposable.add(ApiUtils.initApiService()
@@ -22,15 +22,33 @@ class ProjectsPresenter(private val view: ProjectsView, private val storage: Sto
             }
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
-            .doOnSubscribe { view.showLoading() }
-            .doFinally { view.hideLoading() }
+            .doOnSubscribe { viewState.showLoading() }
+            .doFinally { viewState.hideLoading() }
             .subscribe(
-                { view.showProjects(it.projects) },
-                { view.showError() }
+                { viewState.showProjects(it.projects) },
+                { viewState.showError() }
             )
         )
     }
 
-    fun openProfileFragment(name: String) = view.openProfileFragment(name)
+    fun getUserProjects(username:String){
+        mCompositeDisposable.add(ApiUtils.initApiService()
+            .getUserProjects(username)
+            .doOnSuccess { storage?.insertProjects(it) }
+            .onErrorReturn {  if (networkExceptions.contains(it::class))
+                storage?.getUserProjects(username)
+            else
+                null }
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .doOnSubscribe{viewState.showLoading()}
+            .doFinally{viewState.hideLoading()}
+            .subscribe(
+                { viewState.showProjects(it.projects) },
+                { viewState.showError() })
+        )
+    }
+
+    fun openProfileFragment(name: String) = viewState.openProfileFragment(name)
 
 }

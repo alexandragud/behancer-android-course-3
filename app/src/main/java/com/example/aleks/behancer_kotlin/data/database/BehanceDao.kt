@@ -58,4 +58,7 @@ interface BehanceDao {
     @Query("select * from image")
     fun getImages(): List<Image?>?
 
+    @Query("select project.* from project inner join owner on project.id = owner.project_id where owner.username=:username")
+    fun getUserProjects(username: String):List<Project>?
+
 }
